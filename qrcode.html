@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>Mind the gap</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <script type="text/javascript" src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
+	<script type="text/javascript" src="qrcode.js"></script>
+<style type='text/css'>
+#drop_zone {
+    border: 2px dashed #BBBBBB;
+    border-radius: 10px;
+    color: #BBBBBB;
+    padding: 2px;
+    text-align: center;
+    align: center;
+}
+</style>
+</head>
+  <body>
+  <div id="drop_zone"><!-- input type="file" id="fileinput" /><br/-->
+  <span id="status">Mind the gap</span>
+  </div>
+  <!-- 
+  <textarea id="text" rows="1" cols="100"></textarea>
+  --> 
+ <div id="qrcode" style="width:708px; height:708px; margin:5px;"></div>
+  <script type="text/javascript">
+  
+  // 177x3 = 531
+  // 177x4 = 708
+  
+var qr_size= 708;
+var name = "";
+var text = "";
+var text_chunk_size= 200;
+var text_chunk_displayed = 0;
+var timeout_delay = -1;
+var timeout_id;
+
+var query;
+(function read_query() {
+	query ={};
+	var qs = window.location.search.substr(1).split("&");
+	qs.forEach(kv =>{ var tmp = kv.split("="); var key = tmp.shift(); var val = kv.substr(key.length+1); try { val = JSON.parse(val); } catch(e) {}; query[key] = val; });
+	
+	if (query.auto) timeout_delay = 2000;
+	timeout_delay = query.timeout_delay || timeout_delay;
+	qr_size = query.qr_size || qr_size;
+	text_chunk_size = query.chunk_size || text_chunk_size;
+})();
+
+var qrcode = new QRCode(document.getElementById("qrcode"), {
+	width : qr_size,
+	height : qr_size, 
+	correctLevel : QRCode.CorrectLevel.L,
+	});
+
+(function generate_text() {
+    if (!query.test) return;
+    name = "test";
+	const c = [ "dog", "play", "jump on", "seat on", "the table", "the pond", "cute", "foolish", ".\n" ];
+    for (var i=0; i< 250; i++) {
+        if (i%20==0) text += "[" + i + "] ";
+        text += c[Math.floor(Math.random()*c.length)]+" ";
+    }
+	display_part();
+})();
+
+function handleFileInputChange(evt) {
+	var files = evt.target.files; // FileList object
+	checkFileList(files);
+}
+var fileinput = document.getElementById('fileinput');
+if (fileinput) fileinput.addEventListener('change', handleFileInputChange, false);
+
+function handleDragOver(evt) {
+	evt.stopPropagation();
+	evt.preventDefault();
+	evt.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy.
+}
+function handleFileSelect(evt) {
+	evt.stopPropagation();
+	evt.preventDefault();
+	var files = evt.dataTransfer.files; // FileList object.
+	checkFileList(files);
+}
+var dropZone = document.getElementById('drop_zone');
+document.body.addEventListener('dragover', handleDragOver, false);
+document.body.addEventListener('drop', handleFileSelect, false);
+
+function checkFileList(files) {
+    //bodyAppend("p", "checkFileList  "+files);
+    if (files.length!=1)
+        return error_msg("expecting one input file. "+files);
+
+    if (typeof window.FileReader !== 'function')
+        return error_msg("The file API isn't supported on this browser yet.");
+    //if (window.File && window.FileReader && window.FileList && window.Blob)
+    //	error_msg('The File APIs are not supported in this browser yet.');
+
+    var file = files[0];
+    readFile(file);
+}
+
+function display_part() {
+	if (!text) return console.warn("no data loaded");
+	
+	var nb_chunks = Math.max(1, Math.ceil(text.length / text_chunk_size));
+	
+    var txt;
+    if (text_chunk_displayed==0) {
+        txt = JSON.stringify({ name: name, size: text.length, nb_chunks: nb_chunks });
+    } else {
+        txt = (text_chunk_displayed-1) + "\n" 
+            + text.substr((text_chunk_displayed-1)*text_chunk_size, text_chunk_size);
+    }
+	qrcode.makeCode(txt);
+
+	var elStatus = document.getElementById("status");
+	elStatus.innerHTML= "part "+text_chunk_displayed+"/"+nb_chunks 
+	
+	text_chunk_displayed = (text_chunk_displayed+1) % (nb_chunks+1);
+	
+	if (timeout_id) clearTimeout(timeout_id);
+	if (timeout_delay>0 && text_chunk_displayed>0) timeout_id = setTimeout(display_part, timeout_delay)
+}
+
+function keydown(evt) {
+	if (evt.key=="a") 
+		timeout_delay = (timeout_delay>0) ? -1 : 1000;
+	else
+		display_part()
+}
+
+document.keydown =  display_part;
+$(document).on("keydown", keydown);
+$(document).click(display_part);
+
+function readFile(file) {
+    if (file==undefined)
+        error_msg("readFile: file undefined");
+
+    function file_onload() {
+        name = file.name;
+		text = reader.result;
+		text_chunk_displayed = 0;
+		display_part() ;
+    }
+
+    function file_onerror(evt) {
+        switch(evt.target.error.code) {
+            case evt.target.error.NOT_FOUND_ERR:
+                alert('File Not Found!');
+                break;
+            case evt.target.error.NOT_READABLE_ERR:
+                alert('File is not readable');
+                break;
+            case evt.target.error.ABORT_ERR:
+                break; // noop
+            default:
+                alert('An error occurred reading this file.');
+        };
+    }
+
+    var reader = new FileReader();
+    reader.onload = file_onload;
+    reader.onerror = file_onerror;
+    // read all as text, decoded as 'UTF-8' by default.
+    reader.readAsText(file);
+}
+
+const error_msg = alert;
+
+</script>
+  </body>
+</html>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Mind the gap</title>
+	<meta name="viewport" content="width=device-width, user-scalable=no">
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/webrtc-adapter/3.3.3/adapter.min.js"></script>
+    <!--script type="text/javascript" src="https://rawgit.com/schmich/instascan-builds/master/instascan.min.js"></script-->
+	<script type="text/javascript" src="instascan.min.js"></script>
+</head>
+<body style="width:100%;">
+<div id="status">Parsing QR code... </div>
+<textarea id="text" style="width:95%;"></textarea><br/>
+<video id="preview"></video>
+<script type="text/javascript">
+
+var status_elnt = document.getElementById("status");
+var textarea_elnt = document.getElementById("text");
+
+var query = read_query();
+var data;
+
+let scanner = new Instascan.Scanner({ video: document.getElementById('preview') });
+
+scanner.addListener('scan', function (content) {
+	// read header message
+	try { 
+		data = JSON.parse(content); 
+		data.nb_chunks_received = 0; 
+		data.chunks = []; 
+		
+		status_elnt.textContent = "Reading: "+data.name+". Nb chunks: "+data.nb_chunks;
+	} catch(e) {}
+	
+	// reading data chunk
+	var chunk_head,  chunk_id;
+	try { 
+		chunk_head = content.split("\n").shift();
+		chunk_id  = JSON.parse(chunk_head );
+	} catch(e) {}
+	if (typeof chunk_id !== "number") {
+		status_elnt.textContent = "Unexpected text received.";
+		textarea_elnt.textContent = content;
+	} else {
+		var nb_chunk_ids_skipped = chunk_id - data.nb_chunks_received;
+		if (data.chunks[chunk_id]===undefined) data.nb_chunks_received++;
+		data.chunks[chunk_id] = content.substr(chunk_head.length+1);
+		
+		if (data.nb_chunks_received<data.nb_chunks) {
+			status_elnt.textContent = "Reading: "+data.name+". Chunk "+data.nb_chunks_received+"/"+data.nb_chunks+". "+(nb_chunk_ids_skipped?"Chunk(s) skipped: "+nb_chunk_ids_skipped:"");
+		} else {
+			status_elnt.textContent = data.name;
+			textarea_elnt.textContent = data.chunks.join("");
+		}
+	}
+	console.log(content);
+});
+
+Instascan.Camera.getCameras().then(function (cameras) {
+	if (cameras.length > 0) {
+		var camera = 0;
+		if (query.camera) {
+			if (query.camera<cameras.length)
+				camera = query.camera;
+			else
+				error_msg("NbCameras = "+cameras.length+". Can't select camera "+(query.camera-1)+".");
+		}
+		status_elnt.textContent += cameras[camera].name;
+		scanner.start(cameras[camera]);
+	} else {
+		error_msg('No cameras found.');
+	}
+}).catch(function (e) {
+	error_msg(e.stack||e);
+});
+
+function read_query() {
+	var query ={};
+	var qs = window.location.search.substr(1).split("&");
+	qs.forEach(kv =>{ var tmp = kv.split("="); var key = tmp.shift(); var val = kv.substr(key.length+1); try { val = JSON.parse(val); } catch(e) {}; query[key] = val; });
+	return query;
+}
+
+function error_msg(msg) {
+	console.error(msg);
+	textarea_elnt.textContent = msg;
+	alert(msg);
+}
+</script>
+</body>
+</html>
