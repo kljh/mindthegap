@@ -42,7 +42,12 @@ var query;
 (function read_query() {
 	query ={};
 	var qs = window.location.search.substr(1).split("&");
-	qs.forEach(kv =>{ var tmp = kv.split("="); var key = tmp.shift(); var val = kv.substr(key.length+1); try { val = JSON.parse(val); } catch(e) {}; query[key] = val; });
+	qs.forEach(function (kv) { 
+        var tmp = kv.split("="); 
+        var key = tmp.shift(); 
+        var val = kv.substr(key.length+1); 
+        try { val = JSON.parse(val); } catch(e) {}; 
+        query[key] = val; });
 	
 	if (query.auto) timeout_delay = 2000;
 	timeout_delay = query.timeout_delay || timeout_delay;
