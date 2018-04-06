@@ -73,6 +73,7 @@ scanner.addListener('scan', function (content) {
 	}
 });
 
+// https://github.com/schmich/instascan/issues/33
 Instascan.Camera.getCameras().then(function (cameras) {
 	if (cameras.length > 0)  {
 		for (var i=0; i<cameras.length; i++) 
