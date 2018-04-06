@@ -17,19 +17,33 @@ var status_elnt = document.getElementById("status");
 var textarea_elnt = document.getElementById("text");
 
 var query = read_query();
-var data;
+var info, nb_chunks_received, chunks;
 
 let scanner = new Instascan.Scanner({ video: document.getElementById('preview') });
 
 scanner.addListener('scan', function (content) {
+	console.log(content);
+	
 	// read header message
-	try { 
-		data = JSON.parse(content); 
-		data.nb_chunks_received = 0; 
-		data.chunks = []; 
-		
-		status_elnt.textContent = "Reading: "+data.name+". Nb chunks: "+data.nb_chunks;
+	try {
+		var tmp = JSON.parse(content); 
+		if (JSON.stringify(info) != JSON.stringify(tmp)) {
+			// receiving new file
+			info = tmp;
+			nb_chunks_received = 0; 
+			chunks = []; 
+			extarea_elnt.textContent = "";
+			status_elnt.textContent = "Reading new file : "+ info.name+". Nb chunks: "+ info.nb_chunks;
+		} else {
+			status_elnt.textContent = "File info already received: "+ info.name+". Chunk "+nb_chunks_received+"/"+info.nb_chunks;
+		}
+		return;
 	} catch(e) {}
+	
+	if  (!info) {
+		status_elnt.textContent = "Not an JSON frame.";
+		return;
+	}
 	
 	// reading data chunk
 	var chunk_head,  chunk_id;
@@ -40,23 +54,30 @@ scanner.addListener('scan', function (content) {
 	if (typeof chunk_id !== "number") {
 		status_elnt.textContent = "Unexpected text received.";
 		textarea_elnt.textContent = content;
+		console.error("Unexpected text received.", content);
 	} else {
-		var nb_chunk_ids_skipped = chunk_id - data.nb_chunks_received;
-		if (data.chunks[chunk_id]===undefined) data.nb_chunks_received++;
-		data.chunks[chunk_id] = content.substr(chunk_head.length+1);
-		
-		if (data.nb_chunks_received<data.nb_chunks) {
-			status_elnt.textContent = "Reading: "+data.name+". Chunk "+data.nb_chunks_received+"/"+data.nb_chunks+". "+(nb_chunk_ids_skipped?"Chunk(s) skipped: "+nb_chunk_ids_skipped:"");
+		if (chunks[chunk_id]===undefined) {
+			nb_chunks_received++;
+			var txt = content.substr(chunk_head.length+1);
+			if (txt===undefined) console.error("chunk "+chunk_id+" is "+txt)
+			chunks[chunk_id] = txt;
+		}
+		if (nb_chunks_received<info.nb_chunks) {
+			var nb_chunk_ids_skipped = chunks.length - nb_chunks_received;
+			var chunk_id_skipped = []; for (var k=0; k<chunks.length; k++) if (chunks[k]===undefined) chunk_id_skipped.push(k);
+			status_elnt.textContent = "Reading: "+info.name+". Chunk "+nb_chunks_received+"/"+info.nb_chunks+". "+( true ? "Chunk(s) skipped: "+nb_chunk_ids_skipped+" " + JSON.stringify(chunk_id_skipped) : "" );
 		} else {
-			status_elnt.textContent = data.name;
-			textarea_elnt.textContent = data.chunks.join("");
+			status_elnt.textContent = info.name;
+			textarea_elnt.textContent = chunks.join("");
 		}
 	}
-	console.log(content);
 });
 
 Instascan.Camera.getCameras().then(function (cameras) {
-	if (cameras.length > 0) {
+	if (cameras.length > 0)  {
+		for (var i=0; i<cameras.length; i++) 
+			console.log("Camera "+i+" id="+cameras[i].id+" name="+cameras[i].name);
+		
 		var camera = 0;
 		if (query.camera) {
 			if (query.camera<cameras.length)
@@ -64,8 +85,12 @@ Instascan.Camera.getCameras().then(function (cameras) {
 			else
 				error_msg("NbCameras = "+cameras.length+". Can't select camera "+(query.camera-1)+".");
 		}
-		status_elnt.textContent += cameras[camera].name;
+		status_elnt.textContent = "Using camera "+camera+" id="+cameras[camera].id+" name="+cameras[camera].name;
 		scanner.start(cameras[camera]);
+		
+		for (var i=0; i<cameras.length; i++) 
+			console.log("Camera "+i+" id="+cameras[i].id+" name="+cameras[i].name);
+		
 	} else {
 		error_msg('No cameras found.');
 	}
@@ -76,7 +101,7 @@ Instascan.Camera.getCameras().then(function (cameras) {
 function read_query() {
 	var query ={};
 	var qs = window.location.search.substr(1).split("&");
-	qs.forEach(kv =>{ var tmp = kv.split("="); var key = tmp.shift(); var val = kv.substr(key.length+1); try { val = JSON.parse(val); } catch(e) {}; query[key] = val; });
+	qs.forEach(kv => { var tmp = kv.split("="); var key = tmp.shift(); var val = kv.substr(key.length+1); try { val = JSON.parse(val); } catch(e) {}; query[key] = val; });
 	return query;
 }
 

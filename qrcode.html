@@ -23,8 +23,10 @@
   </div>
   <!-- 
   <textarea id="text" rows="1" cols="100"></textarea>
-  --> 
- <div id="qrcode" style="width:708px; height:708px; margin:5px;"></div>
+  -->
+  <div style="display: flex; justify-content: space-around;">
+    <div id="qrcode" style="width:708px; height:708px; margin:5px;"></div>
+  </div>
   <script type="text/javascript">
   
   // 177x3 = 531
@@ -33,7 +35,7 @@
 var qr_size= 708;
 var name = "";
 var text = "";
-var text_chunk_size= 200;
+var text_chunk_size= 120;
 var text_chunk_displayed = 0;
 var timeout_delay = -1;
 var timeout_id;
@@ -58,7 +60,7 @@ var query;
 var qrcode = new QRCode(document.getElementById("qrcode"), {
 	width : qr_size,
 	height : qr_size, 
-	correctLevel : QRCode.CorrectLevel.L,
+	correctLevel : QRCode.CorrectLevel.M,
 	});
 
 (function generate_text() {
@@ -123,7 +125,7 @@ function display_part() {
 	qrcode.makeCode(txt);
 
 	var elStatus = document.getElementById("status");
-	elStatus.innerHTML= "part "+text_chunk_displayed+"/"+nb_chunks 
+	elStatus.innerHTML= "part "+text_chunk_displayed+"/"+nb_chunks; 
 	
 	text_chunk_displayed = (text_chunk_displayed+1) % (nb_chunks+1);
 	
@@ -132,10 +134,16 @@ function display_part() {
 }
 
 function keydown(evt) {
-	if (evt.key=="a") 
+	if (evt.key=="a") {
 		timeout_delay = (timeout_delay>0) ? -1 : 1000;
-	else
-		display_part()
+	} else {
+		var nb_chunks = Math.max(1, Math.ceil(text.length / text_chunk_size));
+		if (evt.key=="s") { text_chunk_displayed = 0; }
+		if (evt.key=="p") { text_chunk_displayed -= 10;  timeout_delay = -1; }
+		if (evt.key=="n") { text_chunk_displayed += 10;  timeout_delay = -1; } 
+		text_chunk_displayed = (text_chunk_displayed + 10*(nb_chunks+1)) % (nb_chunks+1)
+		display_part();
+	}
 }
 
 document.keydown =  display_part;
@@ -147,7 +155,7 @@ function readFile(file) {
         error_msg("readFile: file undefined");
 
     function file_onload() {
-        name = file.name;
+		name = file.name;
 		text = reader.result;
 		text_chunk_displayed = 0;
 		display_part() ;
