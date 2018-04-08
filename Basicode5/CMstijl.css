@@ -1,0 +1,140 @@
+/* zeroes */
+body, div, p, li {
+	margin:0;
+	padding:0;
+	} 
+	
+div#wrapper {
+	    position: relative;
+	    margin-left: auto;
+	    margin-right: auto;
+	    /* top: 20px; */
+	    width: 800px;
+	    background-color: transparent;  
+		}
+div.plaatjes {float: left; margin: 0 1em 1em 0; }
+div.tussenplaatjes {float: left; margin: 1em 1em 1em 0; }
+div.naplaatjes {clear: left;}
+div.gecentreerd {text-align: center; margin: 1em 1em 1em 1em}
+
+body#index {background: url("pictures/tegel.gif")}
+
+body {
+	font-family: "Times Roman"; 
+	font-size: 18px; 
+	color: black; 
+	background: white;    
+	}
+	
+a 	{
+    color: blue; 
+    text-decoration: none;
+    }
+a:hover {text-decoration: underline;}
+	
+p	{margin: 1em 0 1em 0;}
+p.midden {text-align: center;} 
+p.links {text-align: left;}  
+
+
+figure {display: block; text-align: center;}
+figure img {margin: 20px 0px 0px 0px;} 
+figure p {margin: 5px 0 20px 0; font-size: 80%;} 
+
+
+
+
+h1 	{
+	font-size: 200%;
+    font-weight: normal;
+	color: black;
+	margin: 1em 0 1em 0; 
+	padding: 0;
+	}
+h1.links {text-align: left;}
+h1.midden {text-align: center;}
+			 
+h2  {
+	font-size: 120%;        /* was 150 */
+	font-weight: normal;
+	margin: 1em 0 1em 0;
+	padding: 0;
+	}
+h2.links {text-align: left;}
+h2.midden {text-align: center;}
+
+h3 {
+	font-size: 100%;
+	font-weight: normal;
+	margin: 1em 0 1em 0;  
+	padding: 0;
+	font-style: italic;
+	}
+h3.links {text-align: left;}
+h3.midden {text-align: center;}
+			
+/*h1,2,3 oorspronkelijk midden, h4,5,6 zelfde maar links*/	        
+
+hr {
+	margin: 1em 0 1em 0; 
+	border: 0;
+	color: black;
+	background-color: black;
+	height: 1px;
+	width: 800px;
+	}
+	
+ul.lijst {list-style-position: inside;}  
+ul.nobullets {list-style: none; } 
+
+
+	
+.modalDialog {
+	position: fixed;
+	font-family: Arial, Helvetica, sans-serif;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	background: rgba(0,0,0,0.8);
+	z-index: 99999;
+	opacity:0;
+	pointer-events: none; 
+}
+
+.modalDialog:target {
+	opacity:1;
+	pointer-events: inherit; 
+}
+
+.modalDialog > div {
+	width: 700px;
+	position: relative;
+	margin: 5% auto;         
+	padding: 5px 5px 5px 5px; 
+	border-radius: 10px;
+	background: #fff;
+} 
+
+.close {
+	background: #606061;
+	color: #FFFFFF;
+	line-height: 25px;
+	position: absolute;
+	right: -12px;
+	text-align: center;
+	top: -10px;
+	width: 24px;
+	text-decoration: none;
+	font-weight: bold;
+	-webkit-border-radius: 12px;
+	-moz-border-radius: 12px;
+	border-radius: 12px;
+	-moz-box-shadow: 1px 1px 3px #000;
+	-webkit-box-shadow: 1px 1px 3px #000;
+	box-shadow: 1px 1px 3px #000;
+}
+
+.close:hover { background: #00d9ff; }
+
+                      
