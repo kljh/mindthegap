@@ -69,9 +69,20 @@ scanner.addListener('scan', function (content) {
 		} else {
 			status_elnt.textContent = info.name;
 			textarea_elnt.textContent = chunks.join("");
+			save_to_urldata();
 		}
 	}
 });
+
+function save_to_urldata() {
+	var txt = chunks.map(chunk => (chunk || "\n\n\n!!----+++----!!\n\n\n")).join("");
+	var url = "data:text/plain;base64," + btoa(txt); // latin1 only
+	status_elnt.innerHTML = 'Download <a href="'+url+'" download="'+(info==undefined?'mindthegap.txt':info.name)+'">'+info.name+'</a>';
+}
+
+document.onkeydown = function (evt) {
+	if (evt.key=="s") save_to_urldata();
+};
 
 // https://github.com/schmich/instascan/issues/33
 Instascan.Camera.getCameras().then(function (cameras) {
