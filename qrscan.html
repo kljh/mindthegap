@@ -17,21 +17,21 @@ var status_elnt = document.getElementById("status");
 var textarea_elnt = document.getElementById("text");
 
 var query = read_query();
-var info, nb_chunks_received, chunks;
+var info, nb_chunks_received, chunks, chunk_first_half;
 
 let scanner = new Instascan.Scanner({ video: document.getElementById('preview') });
 
 scanner.addListener('scan', function (content) {
 	console.log(content);
-	
+
 	// read header message
 	try {
-		var tmp = JSON.parse(content); 
+		var tmp = JSON.parse(content);
 		if (JSON.stringify(info) != JSON.stringify(tmp)) {
 			// receiving new file
 			info = tmp;
-			nb_chunks_received = 0; 
-			chunks = []; 
+			nb_chunks_received = 0;
+			chunks = [];
 			extarea_elnt.textContent = "";
 			status_elnt.textContent = "Reading new file : "+ info.name+". Nb chunks: "+ info.nb_chunks;
 		} else {
@@ -39,29 +39,58 @@ scanner.addListener('scan', function (content) {
 		}
 		return;
 	} catch(e) {}
-	
+
 	if  (!info) {
 		status_elnt.textContent = "Not an JSON frame.";
 		return;
 	}
-	
+
 	// reading data chunk
-	var chunk_head,  chunk_id;
-	try { 
+	var chunk_head,  chunk_id, chunk_half;
+	try {
 		chunk_head = content.split("\n").shift();
-		chunk_id  = JSON.parse(chunk_head );
+		chunk_id  = JSON.parse(chunk_head);
 	} catch(e) {}
 	if (typeof chunk_id !== "number") {
 		status_elnt.textContent = "Unexpected text received.";
 		textarea_elnt.textContent = content;
 		console.error("Unexpected text received.", content);
 	} else {
-		if (chunks[chunk_id]===undefined) {
-			nb_chunks_received++;
-			var txt = content.substr(chunk_head.length+1);
-			if (txt===undefined) console.error("chunk "+chunk_id+" is "+txt)
-			chunks[chunk_id] = txt;
+		chunk_half = Math.round((chunk_id - Math.floor(chunk_id))*10);
+		chunk_id = Math.round(chunk_id);
+
+		if (chunk_half!=1)  	chunk_first_half = undefined;
+
+		switch (chunk_half) {
+			case 0:
+				// full chunk
+				if (chunks[chunk_id]===undefined) nb_chunks_received++;
+				var txt = content.substr(chunk_head.length+1);
+				if (txt===undefined) console.error("chunk "+chunk_id+" is "+txt)
+				chunks[chunk_id] = txt;
+				break;
+
+			case 1:
+				// first half of a split chunk
+				chunk_first_half = content.substr(chunk_head.length+1);
+				break;
+			case 2:
+				// second half of a split chunk
+				if (chunk_first_half) {
+					if (chunks[chunk_id]===undefined) nb_chunks_received++;
+					var txt = chunk_first_half + content.substr(chunk_head.length+1);
+					chunks[chunk_id] = txt;
+				} else {
+					console.error("second chunk half received, not following the first half");
+				}
+				break;
+
+			default:
+				console.error("invalid value for chunk half, should be : 0, 1, or 2.");
+
 		}
+
+
 		if (nb_chunks_received<info.nb_chunks) {
 			var nb_chunk_ids_skipped = chunks.length - nb_chunks_received;
 			var chunk_id_skipped = []; for (var k=0; k<chunks.length; k++) if (chunks[k]===undefined) chunk_id_skipped.push(k);
@@ -87,9 +116,9 @@ document.onkeydown = function (evt) {
 // https://github.com/schmich/instascan/issues/33
 Instascan.Camera.getCameras().then(function (cameras) {
 	if (cameras.length > 0)  {
-		for (var i=0; i<cameras.length; i++) 
+		for (var i=0; i<cameras.length; i++)
 			console.log("Camera "+i+" id="+cameras[i].id+" name="+cameras[i].name);
-		
+
 		var camera = 0;
 		if (query.camera) {
 			if (query.camera<cameras.length)
@@ -99,10 +128,10 @@ Instascan.Camera.getCameras().then(function (cameras) {
 		}
 		status_elnt.textContent = "Using camera "+camera+" id="+cameras[camera].id+" name="+cameras[camera].name;
 		scanner.start(cameras[camera]);
-		
-		for (var i=0; i<cameras.length; i++) 
+
+		for (var i=0; i<cameras.length; i++)
 			console.log("Camera "+i+" id="+cameras[i].id+" name="+cameras[i].name);
-		
+
 	} else {
 		error_msg('No cameras found.');
 	}

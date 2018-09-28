@@ -21,22 +21,23 @@
   <div id="drop_zone"><!-- input type="file" id="fileinput" /><br/-->
   <span id="status">Mind the gap</span>
   </div>
-  <!-- 
+  <!--
   <textarea id="text" rows="1" cols="100"></textarea>
   -->
   <div style="display: flex; justify-content: space-around;">
     <div id="qrcode" style="width:708px; height:708px; margin:5px;"></div>
   </div>
   <script type="text/javascript">
-  
+
   // 177x3 = 531
   // 177x4 = 708
-  
+
 var qr_size= 708;
 var name = "";
 var text = "";
 var text_chunk_size= 120;
-var text_chunk_displayed = 0;
+var text_chunk_displayed = 0; // 0=infos, 1 to N = chunks
+var text_chunk_half = 0; // 0=not split in half, 1=1st half, 2=2nd half
 var timeout_delay = -1;
 var timeout_id;
 
@@ -44,13 +45,13 @@ var query;
 (function read_query() {
 	query ={};
 	var qs = window.location.search.substr(1).split("&");
-	qs.forEach(function (kv) { 
-        var tmp = kv.split("="); 
-        var key = tmp.shift(); 
-        var val = kv.substr(key.length+1); 
-        try { val = JSON.parse(val); } catch(e) {}; 
+	qs.forEach(function (kv) {
+        var tmp = kv.split("=");
+        var key = tmp.shift();
+        var val = kv.substr(key.length+1);
+        try { val = JSON.parse(val); } catch(e) {};
         query[key] = val; });
-	
+
 	if (query.auto) timeout_delay = 2000;
 	timeout_delay = query.timeout_delay || timeout_delay;
 	qr_size = query.qr_size || qr_size;
@@ -59,7 +60,7 @@ var query;
 
 var qrcode = new QRCode(document.getElementById("qrcode"), {
 	width : qr_size,
-	height : qr_size, 
+	height : qr_size,
 	correctLevel : QRCode.CorrectLevel.M,
 	});
 
@@ -112,36 +113,61 @@ function checkFileList(files) {
 
 function display_part() {
 	if (!text) return console.warn("no data loaded");
-	
+
 	var nb_chunks = Math.max(1, Math.ceil(text.length / text_chunk_size));
-	
-    var txt;
-    if (text_chunk_displayed==0) {
-        txt = JSON.stringify({ name: name, size: text.length, nb_chunks: nb_chunks });
-    } else {
-        txt = (text_chunk_displayed-1) + "\n" 
-            + text.substr((text_chunk_displayed-1)*text_chunk_size, text_chunk_size);
-    }
+
+	var txt, rng;
+	if (text_chunk_displayed==0) {
+		txt = JSON.stringify({ name: name, size: text.length, nb_chunks: nb_chunks });
+		rng = "(infos)";
+	} else {
+		var label =  (text_chunk_displayed-1) + (text_chunk_half?"."+text_chunk_half:"") ;
+		var pos = (text_chunk_displayed-1)*text_chunk_size   + (text_chunk_half==2?text_chunk_size/2:0) ;
+		var len = text_chunk_half!=0 ? text_chunk_size/2 : text_chunk_size;
+		txt =+ label + "\n" + text.substr(pos, len);
+		rng = "("+pos+" to "+(pos+len)+")";
+	}
 	qrcode.makeCode(txt);
 
 	var elStatus = document.getElementById("status");
-	elStatus.innerHTML= "part "+text_chunk_displayed+"/"+nb_chunks; 
-	
-	text_chunk_displayed = (text_chunk_displayed+1) % (nb_chunks+1);
-	
+	elStatus.innerHTML= "part "+text_chunk_displayed+(text_chunk_half?"."+text_chunk_half:"")+"/"+nb_chunks + " &nbsp;&nbsp; " + rng+ " &nbsp;&nbsp; " + help;
+
+	if (text_chunk_half)
+		text_chunk_half = (text_chunk_half+1)%3;
+	if (!text_chunk_half)
+		text_chunk_displayed = (text_chunk_displayed+1) % (nb_chunks+1);
+
 	if (timeout_id) clearTimeout(timeout_id);
 	if (timeout_delay>0 && text_chunk_displayed>0) timeout_id = setTimeout(display_part, timeout_delay)
 }
 
+var help = "a: auto, s: begin, up/down: +/-25, right/left: +1/-1,  h: split in half"
 function keydown(evt) {
 	if (evt.key=="a") {
 		timeout_delay = (timeout_delay>0) ? -1 : 1000;
 	} else {
 		var nb_chunks = Math.max(1, Math.ceil(text.length / text_chunk_size));
-		if (evt.key=="s") { text_chunk_displayed = 0; }
-		if (evt.key=="p") { text_chunk_displayed -= 10;  timeout_delay = -1; }
-		if (evt.key=="n") { text_chunk_displayed += 10;  timeout_delay = -1; } 
-		text_chunk_displayed = (text_chunk_displayed + 10*(nb_chunks+1)) % (nb_chunks+1)
+		switch (evt.key) {
+			case "s":
+				text_chunk_displayed = 0; break;
+			case "ArrowDown":
+			case "p":
+				text_chunk_displayed -= 16;  timeout_delay = -1; break;
+			case "ArrowUp":
+			case "n":
+				text_chunk_displayed += 14;  timeout_delay = -1; break;
+			case "ArrowLeft":
+			case "z":
+				text_chunk_displayed -= 2;  timeout_delay = -1; break;
+			case "ArrowRight":
+			case " ":
+				text_chunk_displayed += 0;  timeout_delay = -1; break;
+			case "h":
+				text_chunk_displayed -=1; text_chunk_half =1;  timeout_delay = -1; break;
+		}
+
+		text_chunk_displayed = (text_chunk_displayed + 25*(nb_chunks+1)) % (nb_chunks+1)
+		text_chunk_half = (text_chunk_half % 3);
 		display_part();
 	}
 }
