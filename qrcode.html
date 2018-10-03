@@ -148,23 +148,26 @@ function keydown(evt) {
 	} else {
 		var nb_chunks = Math.max(1, Math.ceil(text.length / text_chunk_size));
 		switch (evt.key) {
+			case "Home":
 			case "s":
 				text_chunk_displayed = 0; break;
 			case "ArrowDown":
 			case "p":
-				text_chunk_displayed -= 16;  timeout_delay = -1; break;
+				text_chunk_displayed -= 16;  break;
 			case "ArrowUp":
 			case "n":
-				text_chunk_displayed += 14;  timeout_delay = -1; break;
+				text_chunk_displayed += 14; break;
 			case "ArrowLeft":
 			case "z":
-				text_chunk_displayed -= 2;  timeout_delay = -1; break;
+				text_chunk_displayed -= 2; break;
 			case "ArrowRight":
 			case " ":
-				text_chunk_displayed += 0;  timeout_delay = -1; break;
+				text_chunk_displayed += 0; break;
 			case "h":
-				text_chunk_displayed -=1; text_chunk_half =1;  timeout_delay = -1; break;
+				text_chunk_displayed -=1; text_chunk_half =1; break;
 		}
+		if (evt.key!=" " && evt.key!="Enter")
+			timeout_delay = -1;
 
 		text_chunk_displayed = (text_chunk_displayed + 25*(nb_chunks+1)) % (nb_chunks+1)
 		text_chunk_half = (text_chunk_half % 3);
